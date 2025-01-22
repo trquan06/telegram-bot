@@ -1,10 +1,14 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 class Config:
     # Telegram Configuration
-    API_IDS = ["21164074"]  # List to support multiple API IDs
-    API_HASHES = ["9aebf8ac7742705ce930b06a706754fd"]  # List to support multiple API hashes
-    BOT_TOKEN = "7878223314:AAGdrEWvu86sVWXCHIDFqqZw6m68mK6q5pY"
+    API_IDS = os.getenv('TELEGRAM_API_IDS', '').split(',')
+    API_HASHES = os.getenv('TELEGRAM_API_HASHES', '').split(',')
+    BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN', '')
     
     # Path Configuration
     BASE_DOWNLOAD_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
