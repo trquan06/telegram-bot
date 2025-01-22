@@ -12,10 +12,17 @@ class Config:
     
     # Path Configuration
     BASE_DOWNLOAD_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
-    
-    # Performance Settings
-    CHUNK_SIZE = 1024 * 1024  # 1MB chunks
-    MAX_CONCURRENT_DOWNLOADS = 10
+ # Add to config.py
+API_CREDENTIALS = [
+    {"api_id": "YOUR_API_ID_1", "api_hash": "YOUR_API_HASH_1"},
+    {"api_id": "YOUR_API_ID_2", "api_hash": "YOUR_API_HASH_2"},
+    # Add more API credentials as needed
+]
+
+MAX_CONCURRENT_DOWNLOADS = 3
+CHUNK_SIZE = 8192
+MAX_RETRIES = 3
+MIN_REQUEST_INTERVAL = 0.05   
     
     # Media Types
     SUPPORTED_MEDIA_TYPES = {
