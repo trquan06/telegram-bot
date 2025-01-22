@@ -4,7 +4,18 @@ import logging
 import os
 from datetime import datetime
 from dataclasses import dataclass, field
+# Add at the top of base_util.py
+class OperationStatus:
+    SUCCESS = "success"
+    ERROR = "error"
+    WARNING = "warning"
+    INFO = "info"
 
+class OperationType:
+    DOWNLOAD = "download"
+    UPLOAD = "upload"
+    API_REQUEST = "api_request"
+    SYSTEM = "system"
 @dataclass
 class OperationResult:
     """Generic result object for operations"""
@@ -50,17 +61,55 @@ class BaseUtil:
         return logger
 
     async def log_operation(self, operation: str, result: OperationResult):
-        """Log operation details"""
+        """Enhanced operation logging with more context"""
         log_level = logging.ERROR if not result.success else logging.INFO
         
-        self.logger.log(
-            log_level,
-            f"Operation: {operation} - Success: {result.success} - "
-            f"Message: {result.message}"
-        )
+        log_context = {
+            "operation": operation,
+            "success": result.success,
+            "message": result.message,
+            "timestamp": result.timestamp.isoformat(),
+        }
         
+        if result.data:
+            log_context["data"] = result.data
+            
         if result.error:
+            log_context["error_type"] = type(result.error).__name__
+            log_context["error_details"] = str(result.error)
             self.logger.error(
-                f"Error details: {str(result.error)}\n"
+                f"Error in operation {operation}",
+                extra={"context": log_context}
+            )
+        else:
+            self.logger.log(
+                log_level,
+                f"Operation {operation} completed",
+                extra={"context": log_context}
+            )
                 f"Error type: {type(result.error).__name__}"
+            )
+def format_size(self, size_bytes: int) -> str:
+        """Format file size in human-readable format"""
+        for unit in ['B', 'KB', 'MB', 'GB']:
+            if size_bytes < 1024:
+                return f"{size_bytes:.2f}{unit}"
+            size_bytes /= 1024
+        return f"{size_bytes:.2f}TB"
+
+    async def safe_execution(self, func, *args, operation_name: str = "", **kwargs) -> OperationResult:
+        """Safely execute a function with error handling"""
+        try:
+            result = await func(*args, **kwargs)
+            return OperationResult(
+                success=True,
+                message=f"{operation_name} completed successfully",
+                data=result
+            )
+        except Exception as e:
+            self.logger.exception(f"Error in {operation_name}")
+            return OperationResult(
+                success=False,
+                message=f"{operation_name} failed: {str(e)}",
+                error=e
             )
