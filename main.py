@@ -13,7 +13,8 @@ from handlers.message_handlers import handle_message
 from handlers.upload_handler import UploadHandler
 from utils.error_handler import ErrorHandler
 from utils.state_manager import StateManager
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from utils.maintenance import MaintenanceManager
 # Initialize configuration
 config = Config()
 
@@ -93,6 +94,15 @@ async def status(client, message):
     except Exception as e:
         error_msg = await error_handler.handle_error(e, "status command")
         await message.reply(f"Error getting status: {error_msg}")
+# Initialize maintenance manager
+maintenance_manager = MaintenanceManager(config)
+
+# Set up scheduler
+scheduler = AsyncIOScheduler()
+scheduler.add_job(maintenance_manager.cleanup_old_files, 'cron', hour=0)
+scheduler.add_job(maintenance_manager.rotate_logs, 'cron', hour=12)
+scheduler.add_job(maintenance_manager.check_disk_space, 'interval', hours=1)
+scheduler.start()        
 # Start the bot
 if __name__ == "__main__":
     print("Bot starting...")
