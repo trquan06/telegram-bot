@@ -1,21 +1,15 @@
-# Telegram Media Downloader Bot
+# Telegram Download Bot
 
-A Telegram bot that can download media from messages and URLs, with support for uploading to Google Photos.
-
-## Features
-
-- Download media from Telegram messages
-- Download media from URLs
-- Upload media to Google Photos
-- Monitor system status
-- Handle multiple API credentials
-- Automatic archive extraction
-- Progress tracking
-- Error handling with retry mechanism
-- FloodWait protection
+A Telegram bot for downloading and managing media files.
 
 ## Setup
+1. Clone the repository
+2. Create a `.env` file with your credentials
+3. Install requirements: `pip install -r requirements.txt`
+4. Run the bot: `python main.py`
 
-1. Install requirements:
-```bash
-pip install -r requirements.txt
+## Environment Variables
+```env
+TELEGRAM_API_IDS=your_api_id
+TELEGRAM_API_HASHES=your_api_hash
+TELEGRAM_BOT_TOKEN=your_bot_token
