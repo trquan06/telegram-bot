@@ -1,5 +1,8 @@
 import time
 import humanize
+import zipfile
+import os
+import shutil
 from datetime import timedelta
 
 class DownloadManager:
@@ -41,3 +44,48 @@ class DownloadManager:
     def finish_download(self, message_id, chat_id):
         if (message_id, chat_id) in self.start_times:
             del self.start_times[(message_id, chat_id)]
+
+    async def handle_downloaded_file(self, file_path, message):
+        """Handle downloaded file, including automatic ZIP extraction"""
+        try:
+            if file_path.lower().endswith('.zip'):
+                await self.extract_archive(file_path, message)
+            return True
+        except Exception as e:
+            await message.reply(f"Error handling downloaded file: {str(e)}")
+            return False
+
+    async def extract_archive(self, file_path, message):
+        """Extract ZIP archive directly to download folder"""
+        try:
+            download_dir = os.path.dirname(file_path)
+            file_name = os.path.basename(file_path)
+            
+            if file_path.lower().endswith('.zip'):
+                status_msg = await message.reply(f"📦 Extracting {file_name}...")
+                
+                extracted_files = []
+                with zipfile.ZipFile(file_path, 'r') as zip_ref:
+                    # Extract all files directly to download directory
+                    for zip_info in zip_ref.infolist():
+                        if not zip_info.filename.endswith('/'):  # Skip directories
+                            extracted_name = os.path.basename(zip_info.filename)
+                            target_path = os.path.join(download_dir, extracted_name)
+                            
+                            # Extract the file
+                            with zip_ref.open(zip_info) as source, open(target_path, 'wb') as target:
+                                shutil.copyfileobj(source, target)
+                            extracted_files.append(extracted_name)
+                
+                # Remove the original zip file after extraction
+                os.remove(file_path)
+                
+                # Update status message
+                await status_msg.edit_text(
+                    f"✅ Archive extracted successfully!\n"
+                    f"📂 Location: {download_dir}\n"
+                    f"📑 Files extracted: {len(extracted_files)}\n"
+                )
+            
+        except Exception as e:
+            await message.reply(f"❌ Error extracting archive: {str(e)}")
