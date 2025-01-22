@@ -12,6 +12,7 @@ from handlers.command_handlers import (
 from handlers.message_handlers import handle_message
 from handlers.upload_handler import UploadHandler
 from utils.error_handler import ErrorHandler
+from utils.api_manager import APIManager, DownloadOptimizer
 from utils.state_manager import StateManager
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from utils.maintenance import MaintenanceManager
@@ -25,7 +26,9 @@ state_manager = StateManager(config.MAX_CONCURRENT_DOWNLOADS)
 flood_handler = FloodWaitHandler()
 download_manager = DownloadManager()
 upload_handler = UploadHandler(config)
-
+error_handler = ErrorHandler()
+api_manager = APIManager(config.API_CREDENTIALS)
+download_optimizer = DownloadOptimizer(max_concurrent=config.MAX_CONCURRENT_DOWNLOADS)
 # Global state
 downloading = False
 failed_files = []
@@ -55,9 +58,39 @@ async def start(client, message):
         "You can also send a URL to download directly"
     )
 
-app.on_message(filters.command("download"))(
-    lambda c, m: download_command(c, m, download_lock, downloading, download_from_url)
-)
+# Modify your download command to use the new optimizations:
+@app.on_message(filters.command("download"))
+async def download_command(client, message):
+    try:
+        if len(message.command) < 2:
+            await message.reply("Please provide a URL to download")
+            return
+
+        url = message.command[1]
+        
+        async def download_operation():
+            # Your download logic here, using api_manager and download_optimizer
+            await api_manager.make_request(
+                download_optimizer.download_file,
+                client, message, file_id, file_size
+            )
+
+        await download_operation()
+        
+    except Exception as e:
+        error_record = await error_handler.handle_error(
+            e, 
+            "download_command",
+            retry_func=download_operation
+        )
+        
+        if error_record.resolved:
+            await message.reply("Download completed after retry")
+        else:
+            await message.reply(
+                f"Failed to download: {error_record.message}\n"
+                f"Error ID: {error_record.error_type}"
+            )
 app.on_message(filters.command("stop"))(
     lambda c, m: stop_command(c, m, download_lock, downloading)
 )
