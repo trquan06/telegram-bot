@@ -11,16 +11,19 @@ from handlers.command_handlers import (
 )
 from handlers.message_handlers import handle_message
 from handlers.upload_handler import UploadHandler
+from utils.error_handler import ErrorHandler
+from utils.state_manager import StateManager
 
 # Initialize configuration
 config = Config()
 
 # Initialize components
+config = Config()
+error_handler = ErrorHandler()
+state_manager = StateManager(config.MAX_CONCURRENT_DOWNLOADS)
 flood_handler = FloodWaitHandler()
 download_manager = DownloadManager()
 upload_handler = UploadHandler(config)
-download_lock = asyncio.Lock()
-download_semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_DOWNLOADS)
 
 # Global state
 downloading = False
@@ -71,7 +74,25 @@ app.on_message(filters.command("status"))(
 app.on_message()(
     lambda c, m: handle_message(c, m, downloading, download_from_url)
 )
-
+# Update error handling in command handlers
+@app.on_message(filters.command("status"))
+async def status(client, message):
+    try:
+        system_status = get_system_status()
+        active_downloads = state_manager.get_active_downloads()
+        recent_errors = error_handler.get_recent_errors()
+        
+        status_text = (
+            f"🖥 System Status:\n{system_status}\n\n"
+            f"📥 Active Downloads: {len(active_downloads)}\n"
+            f"❌ Failed Files: {len(state_manager.failed_files)}\n"
+            f"⚠️ Recent Errors: {len(recent_errors)}\n"
+        )
+        
+        await message.reply(status_text)
+    except Exception as e:
+        error_msg = await error_handler.handle_error(e, "status command")
+        await message.reply(f"Error getting status: {error_msg}")
 # Start the bot
 if __name__ == "__main__":
     print("Bot starting...")
