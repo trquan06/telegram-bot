@@ -9,6 +9,7 @@ async def start_command(client, message):
         "/download - Start download mode\n"
         "/stop - Stop all operations\n"
         "/upload - Sync files to Google Photos\n"
+        "/retry_upload - Retry failed uploads\n"
         "/retry_download - Retry failed downloads\n"
         "/status - Check system status\n"
         "You can also send a URL to download directly"
