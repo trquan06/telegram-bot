@@ -1,4 +1,4 @@
-from pyrogram import Client
+from pyrogram import Client, filters
 import asyncio
 import os
 from config import Config
@@ -10,6 +10,7 @@ from handlers.command_handlers import (
     upload_command, status_command
 )
 from handlers.message_handlers import handle_message
+from handlers.upload_handler import UploadHandler
 
 # Initialize configuration
 config = Config()
@@ -17,12 +18,12 @@ config = Config()
 # Initialize components
 flood_handler = FloodWaitHandler()
 download_manager = DownloadManager()
+upload_handler = UploadHandler(config)
 download_lock = asyncio.Lock()
 download_semaphore = asyncio.Semaphore(config.MAX_CONCURRENT_DOWNLOADS)
 
 # Global state
 downloading = False
-uploading = False
 failed_files = []
 error_messages = set()
 
@@ -37,21 +38,36 @@ app = Client(
 )
 
 # Register command handlers
-app.on_message(filters.command("start"))(start_command)
+@app.on_message(filters.command("start"))
+async def start(client, message):
+    await message.reply(
+        "Welcome! Available commands:\n"
+        "/download - Start download mode\n"
+        "/stop - Stop all operations\n"
+        "/upload - Sync files to Google Photos\n"
+        "/retry_upload - Retry failed uploads\n"
+        "/retry_download - Retry failed downloads\n"
+        "/status - Check system status\n"
+        "You can also send a URL to download directly"
+    )
+
 app.on_message(filters.command("download"))(
     lambda c, m: download_command(c, m, download_lock, downloading, download_from_url)
 )
 app.on_message(filters.command("stop"))(
-    lambda c, m: stop_command(c, m, download_lock, downloading, uploading)
+    lambda c, m: stop_command(c, m, download_lock, downloading)
 )
 app.on_message(filters.command("upload"))(
-    lambda c, m: upload_command(c, m, uploading, config.BASE_DOWNLOAD_FOLDER)
+    lambda c, m: upload_handler.upload_to_google_photos(m)
+)
+app.on_message(filters.command("retry_upload"))(
+    lambda c, m: upload_handler.retry_upload(m)
 )
 app.on_message(filters.command("status"))(
     lambda c, m: status_command(c, m, get_system_status, config, download_semaphore, failed_files, flood_handler)
 )
 
-# Register message handler
+# Register message handler for downloads
 app.on_message()(
     lambda c, m: handle_message(c, m, downloading, download_from_url)
 )
