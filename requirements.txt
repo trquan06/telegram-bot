@@ -9,5 +9,5 @@ rclone-python
 aiohttp
 beautifulsoup4
 humanize
-python-dotenv==1.0.0
+python-dotenv==1.0.1
 aiohttp==3.8.5
